@@ -12,6 +12,7 @@ import pytest
 import random
 import string
 
+from botocore.exceptions import ClientError
 from case import Mock, skip
 
 from kombu import messaging
@@ -518,6 +519,26 @@ class test_Channel:
         self.channel.sqs().delete_message = Mock()
         self.channel.basic_ack(1)
         assert not self.sqs_conn_mock.delete_message.called
+
+    def test_basic_ack_invalid_receipt_handle(self, ):
+        """Test that basic_ack calls the delete_message properly"""
+        message = {
+            'sqs_message': {
+                'ReceiptHandle': '2'
+            },
+            'sqs_queue': 'testing_queue'
+        }
+        mock_messages = Mock()
+        mock_messages.delivery_info = message
+        self.channel.qos.append(mock_messages, 1)
+        self.channel.sqs().delete_message = Mock()
+        self.sqs_conn_mock.delete_message.side_effect = ClientError
+        with self.assertRaises(ClientError):
+            self.channel.basic_ack(2)
+        self.sqs_conn_mock.delete_message.assert_called_with(
+            QueueUrl=message['sqs_queue'],
+            ReceiptHandle=message['sqs_message']['ReceiptHandle']
+        )
 
     def test_predefined_queues_primes_queue_cache(self):
         connection = Connection(transport=SQS.Transport, transport_options={

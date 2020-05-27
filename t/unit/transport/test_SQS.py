@@ -14,6 +14,7 @@ import string
 
 from botocore.exceptions import ClientError
 from case import Mock, skip
+from case.mock import patch
 
 from kombu import messaging
 from kombu import Connection, Exchange, Queue
@@ -541,6 +542,7 @@ class test_Channel:
 
         mock_messages = Mock()
         mock_messages.delivery_info = message
+        base_channel_mock = patch.object(self.channel, '__bases__', (Mock,))
         self.channel.qos.append(mock_messages, 2)
         self.channel.sqs().delete_message = Mock()
         self.channel.sqs().delete_message.side_effect = ClientError(
@@ -552,6 +554,8 @@ class test_Channel:
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
+        base_channel_mock.basic_reject.called_with(2)
+        assert not base_channel_mock.basic_ack.called
         assert {2} == self.channel.qos._dirty
 
     def test_predefined_queues_primes_queue_cache(self):

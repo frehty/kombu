@@ -507,6 +507,7 @@ class test_Channel:
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
+        print('>>>>>>>>> {}'.format(self.channel.called))
 
     def test_basic_ack_without_sqs_message(self, ):
         """Test that basic_ack calls the delete_message properly"""
@@ -519,6 +520,7 @@ class test_Channel:
         self.channel.sqs().delete_message = Mock()
         self.channel.basic_ack(1)
         assert not self.sqs_conn_mock.delete_message.called
+        print('>>>>>>>>> {}'.format(self.channel.called))
 
     def test_basic_ack_invalid_receipt_handle(self, ):
         """Test that basic_ack calls the delete_message properly"""
@@ -528,12 +530,6 @@ class test_Channel:
             },
             'sqs_queue': 'testing_queue'
         }
-        expected_error_message = (
-            'An error occurred (InvalidParameterValue) when calling '
-            'the {DeleteMessage} operation: Value 2 for parameter '
-            'ReceiptHandle is invalid. Reason: '
-            'The receipt handle has expired.'
-        )
         error_response = {
             'Error': {
                 'Code': 'InvalidParameterValue',
@@ -551,9 +547,8 @@ class test_Channel:
             error_response=error_response,
             operation_name=operation_name
         )
-        with pytest.raises(ClientError) as ce:
-            self.channel.basic_ack(2)
-        assert expected_error_message == ce.value
+        self.channel.basic_ack(2)
+        print('>>>>>>>>> {}'.format(self.channel.called))
         self.sqs_conn_mock.delete_message.assert_called_with(
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']

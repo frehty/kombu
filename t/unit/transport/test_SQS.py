@@ -528,13 +528,32 @@ class test_Channel:
             },
             'sqs_queue': 'testing_queue'
         }
+        expected_error_message = (
+            'An error occurred (InvalidParameterValue) when calling '
+            'the {DeleteMessage} operation: Value 1 for parameter '
+            'ReceiptHandle is invalid. Reason: '
+            'The receipt handle has expired.'
+        )
+        error_response = {
+            'Error': {
+                'Code': 'InvalidParameterValue',
+                'Message': 'Value 1 for parameter ReceiptHandle is invalid.'
+                           ' Reason: The receipt handle has expired.'
+            }
+        }
+        operation_name = 'DeleteMessage'
+
         mock_messages = Mock()
         mock_messages.delivery_info = message
         self.channel.qos.append(mock_messages, 1)
         self.channel.sqs().delete_message = Mock()
-        self.sqs_conn_mock.delete_message.side_effect = ClientError
-        with pytest.raises(ClientError):
+        self.sqs_conn_mock.delete_message.side_effect = ClientError(
+            error_response=error_response,
+            operation_name=operation_name
+        )
+        with pytest.raises(ClientError) as ce:
             self.channel.basic_ack(1)
+        assert expected_error_message == ce.value
         self.sqs_conn_mock.delete_message.assert_called_with(
             QueueUrl=message['sqs_queue'],
             ReceiptHandle='1'

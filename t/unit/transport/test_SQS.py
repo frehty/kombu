@@ -510,7 +510,31 @@ class test_Channel:
         )
         assert {1} == self.channel.qos._dirty
 
-    def test_basic_ack_without_sqs_message(self, ):
+    @patch('kombu.transport.virtual.base.Channel.basic_ack')
+    @patch('kombu.transport.virtual.base.Channel.basic_reject')
+    def test_basic_ack_with_mocked_channel_methods(self, basic_reject_mock, basic_ack_mock):
+        """Test that basic_ack calls the delete_message properly"""
+        message = {
+            'sqs_message': {
+                'ReceiptHandle': '1'
+            },
+            'sqs_queue': 'testing_queue'
+        }
+        mock_messages = Mock()
+        mock_messages.delivery_info = message
+        self.channel.qos.append(mock_messages, 1)
+        self.channel.sqs().delete_message = Mock()
+        self.channel.basic_ack(1)
+        self.sqs_conn_mock.delete_message.assert_called_with(
+            QueueUrl=message['sqs_queue'],
+            ReceiptHandle=message['sqs_message']['ReceiptHandle']
+        )
+        basic_ack_mock.assert_called_with(1)
+        assert not basic_reject_mock.called
+
+    @patch('kombu.transport.virtual.base.Channel.basic_ack')
+    @patch('kombu.transport.virtual.base.Channel.basic_reject')
+    def test_basic_ack_without_sqs_message(self, basic_reject_mock, basic_ack_mock):
         """Test that basic_ack calls the delete_message properly"""
         message = {
             'sqs_queue': 'testing_queue'
@@ -521,7 +545,8 @@ class test_Channel:
         self.channel.sqs().delete_message = Mock()
         self.channel.basic_ack(1)
         assert not self.sqs_conn_mock.delete_message.called
-        assert {1} == self.channel.qos._dirty
+        basic_ack_mock.assert_called_with(1)
+        assert not basic_reject_mock.called
 
     @patch('kombu.transport.virtual.base.Channel.basic_ack')
     @patch('kombu.transport.virtual.base.Channel.basic_reject')
@@ -557,7 +582,6 @@ class test_Channel:
         )
         basic_reject_mock.assert_called_with(2)
         assert not basic_ack_mock.called
-        assert {2} == self.channel.qos._dirty
 
     def test_predefined_queues_primes_queue_cache(self):
         connection = Connection(transport=SQS.Transport, transport_options={

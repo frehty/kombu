@@ -533,11 +533,11 @@ class test_Channel:
         self.channel.qos.append(mock_messages, 1)
         self.channel.sqs().delete_message = Mock()
         self.sqs_conn_mock.delete_message.side_effect = ClientError
-        with self.assertRaises(ClientError):
-            self.channel.basic_ack(2)
+        with pytest.raises(ClientError):
+            self.channel.basic_ack(1)
         self.sqs_conn_mock.delete_message.assert_called_with(
             QueueUrl=message['sqs_queue'],
-            ReceiptHandle=message['sqs_message']['ReceiptHandle']
+            ReceiptHandle='1'
         )
 
     def test_predefined_queues_primes_queue_cache(self):

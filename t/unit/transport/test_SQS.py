@@ -543,7 +543,8 @@ class test_Channel:
         mock_messages = Mock()
         mock_messages.delivery_info = message
         print('>>>>>>>>>>>>>>> {}'.format(SQS.Channel.__bases__))
-        base_channel_mock = patch.object(self.channel, '__bases__', (Mock,))
+        basic_ack_mock = patch('kombu.transport.virtual.base.Channel.basic_ack')
+        basic_reject_mock = patch('kombu.transport.virtual.base.Channel.basic_reject')
         self.channel.qos.append(mock_messages, 2)
         self.channel.sqs().delete_message = Mock()
         self.channel.sqs().delete_message.side_effect = ClientError(
@@ -556,8 +557,8 @@ class test_Channel:
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
         print('>>>>>>>>>>>>>>> {}'.format(SQS.Channel.__bases__))
-        base_channel_mock.basic_reject.called_with(2)
-        assert not base_channel_mock.basic_ack.called
+        basic_reject_mock.called_with(2)
+        assert not basic_ack_mock.called
         assert {2} == self.channel.qos._dirty
 
     def test_predefined_queues_primes_queue_cache(self):

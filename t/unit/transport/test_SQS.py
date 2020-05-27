@@ -554,6 +554,7 @@ class test_Channel:
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
+        print('>>>>>>>>>>>>>>> {}'.format(self.channel.__bases__))
         base_channel_mock.basic_reject.called_with(2)
         assert not base_channel_mock.basic_ack.called
         assert {2} == self.channel.qos._dirty

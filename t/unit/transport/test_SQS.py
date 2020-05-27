@@ -542,6 +542,7 @@ class test_Channel:
 
         mock_messages = Mock()
         mock_messages.delivery_info = message
+        print('>>>>>>>>>>>>>>> {}'.format(SQS.Channel.__bases__))
         base_channel_mock = patch.object(self.channel, '__bases__', (Mock,))
         self.channel.qos.append(mock_messages, 2)
         self.channel.sqs().delete_message = Mock()
@@ -554,7 +555,7 @@ class test_Channel:
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
-        print('>>>>>>>>>>>>>>> {}'.format(self.channel.__bases__))
+        print('>>>>>>>>>>>>>>> {}'.format(SQS.Channel.__bases__))
         base_channel_mock.basic_reject.called_with(2)
         assert not base_channel_mock.basic_ack.called
         assert {2} == self.channel.qos._dirty

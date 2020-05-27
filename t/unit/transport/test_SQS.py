@@ -523,7 +523,9 @@ class test_Channel:
         assert not self.sqs_conn_mock.delete_message.called
         assert {1} == self.channel.qos._dirty
 
-    def test_basic_ack_invalid_receipt_handle(self, ):
+    @patch('kombu.transport.virtual.base.Channel.basic_ack')
+    @patch('kombu.transport.virtual.base.Channel.basic_reject')
+    def test_basic_ack_invalid_receipt_handle(self, basic_reject_mock, basic_ack_mock):
         """Test that basic_ack calls the delete_message properly"""
         message = {
             'sqs_message': {
@@ -542,9 +544,6 @@ class test_Channel:
 
         mock_messages = Mock()
         mock_messages.delivery_info = message
-        print('>>>>>>>>>>>>>>> {}'.format(SQS.Channel.__bases__))
-        basic_ack_mock = patch('kombu.transport.virtual.base.Channel.basic_ack')
-        basic_reject_mock = patch('kombu.transport.virtual.base.Channel.basic_reject')
         self.channel.qos.append(mock_messages, 2)
         self.channel.sqs().delete_message = Mock()
         self.channel.sqs().delete_message.side_effect = ClientError(
@@ -556,8 +555,7 @@ class test_Channel:
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
-        print('>>>>>>>>>>>>>>> {}'.format(SQS.Channel.__bases__))
-        basic_reject_mock.called_with(2)
+        basic_reject_mock.assert_called_with(2)
         assert not basic_ack_mock.called
         assert {2} == self.channel.qos._dirty
 

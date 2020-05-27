@@ -501,14 +501,13 @@ class test_Channel:
         mock_messages = Mock()
         mock_messages.delivery_info = message
         self.channel.qos.append(mock_messages, 1)
-        print('>>>>>>>> {}'.format(self.channel.qos._dirty))
         self.channel.sqs().delete_message = Mock()
         self.channel.basic_ack(1)
-        print('>>>>>>>> {}'.format(self.channel.qos._dirty))
         self.sqs_conn_mock.delete_message.assert_called_with(
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
+        assert {1} == self.channel.qos._dirty
 
     def test_basic_ack_without_sqs_message(self, ):
         """Test that basic_ack calls the delete_message properly"""
@@ -521,6 +520,7 @@ class test_Channel:
         self.channel.sqs().delete_message = Mock()
         self.channel.basic_ack(1)
         assert not self.sqs_conn_mock.delete_message.called
+        assert {1} == self.channel.qos._dirty
 
     def test_basic_ack_invalid_receipt_handle(self, ):
         """Test that basic_ack calls the delete_message properly"""
@@ -542,18 +542,17 @@ class test_Channel:
         mock_messages = Mock()
         mock_messages.delivery_info = message
         self.channel.qos.append(mock_messages, 2)
-        print('>>>>>>>> {}'.format(self.channel.qos._dirty))
         self.channel.sqs().delete_message = Mock()
         self.channel.sqs().delete_message.side_effect = ClientError(
             error_response=error_response,
             operation_name=operation_name
         )
         self.channel.basic_ack(2)
-        print('>>>>>>>> {}'.format(self.channel.qos._dirty))
         self.sqs_conn_mock.delete_message.assert_called_with(
             QueueUrl=message['sqs_queue'],
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
+        assert {2} == self.channel.qos._dirty
 
     def test_predefined_queues_primes_queue_cache(self):
         connection = Connection(transport=SQS.Transport, transport_options={

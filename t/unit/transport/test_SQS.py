@@ -507,6 +507,18 @@ class test_Channel:
             ReceiptHandle=message['sqs_message']['ReceiptHandle']
         )
 
+    def test_basic_ack_without_sqs_message(self, ):
+        """Test that basic_ack calls the delete_message properly"""
+        message = {
+            'sqs_queue': 'testing_queue'
+        }
+        mock_messages = Mock()
+        mock_messages.delivery_info = message
+        self.channel.qos.append(mock_messages, 1)
+        self.channel.sqs().delete_message = Mock()
+        self.channel.basic_ack(1)
+        assert not self.sqs_conn_mock.delete_message.called
+
     def test_predefined_queues_primes_queue_cache(self):
         connection = Connection(transport=SQS.Transport, transport_options={
             'predefined_queues': example_predefined_queues,
